@@ -60,11 +60,7 @@ impl<T> Sink<T> for UnboundedSenderSink<T> {
         item: T,
     ) -> std::result::Result<(), SinkError> {
         self.sender_if_open()
-            .map(|sender| {
-                sender
-                    .send(item)
-                    .map_err(|_| SinkError::SendFailed)
-            })
+            .map(|sender| sender.send(item).map_err(|_| SinkError::SendFailed))
             .unwrap_or_else(|| Err(SinkError::ChannelClosed))
     }
 
