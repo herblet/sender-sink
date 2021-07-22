@@ -1,0 +1,16 @@
+[package]
+name = "tokio-sink"
+version = "0.1.0"
+authors = ["Toby Grasl <herblet@knowledge42.com>"]
+edition = "2018"
+description = "Utility classes for working with tokio and the Sink trait."
+homepage = "https://github.com/herblet/tokio-sink"
+license = "MIT"
+repository = "https://github.com/herblet/tokio-sink"
+
+[dependencies]
+tokio = { version = "1", features = ["sync"] }
+futures = { version = "0.3", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt","macros"] }

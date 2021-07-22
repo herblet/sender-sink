@@ -1,7 +1,12 @@
-use crate::error::StomperError;
 use futures::sink::Sink;
 use futures::task::Poll;
 use tokio::sync::mpsc::UnboundedSender;
+
+#[derive(Debug)]
+pub enum SinkError {
+    ChannelClosed,
+    SendFailed,
+}
 /// Wraps an UnboundedSender in a Sink
 pub struct UnboundedSenderSink<T> {
     sender: Option<UnboundedSender<T>>,
@@ -22,11 +27,11 @@ impl<T> UnboundedSenderSink<T> {
             }
         }
     }
-    fn ok_unless_closed(&mut self) -> std::task::Poll<std::result::Result<(), StomperError>> {
+    fn ok_unless_closed(&mut self) -> std::task::Poll<std::result::Result<(), SinkError>> {
         Poll::Ready(
             self.sender_if_open()
                 .map(|_| ())
-                .ok_or_else(|| StomperError::new("Closed")),
+                .ok_or_else(|| SinkError::ChannelClosed),
         )
     }
 }
@@ -42,38 +47,38 @@ impl<T> From<UnboundedSender<T>> for UnboundedSenderSink<T> {
 }
 
 impl<T> Sink<T> for UnboundedSenderSink<T> {
-    type Error = StomperError;
+    type Error = SinkError;
     fn poll_ready(
         mut self: std::pin::Pin<&mut Self>,
         _: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<std::result::Result<(), StomperError>> {
+    ) -> std::task::Poll<std::result::Result<(), SinkError>> {
         self.ok_unless_closed()
     }
 
     fn start_send(
         mut self: std::pin::Pin<&mut Self>,
         item: T,
-    ) -> std::result::Result<(), StomperError> {
+    ) -> std::result::Result<(), SinkError> {
         self.sender_if_open()
             .map(|sender| {
                 sender
                     .send(item)
-                    .map_err(|_| StomperError::new("Send Failed"))
+                    .map_err(|_| SinkError::SendFailed)
             })
-            .unwrap_or_else(|| Err(StomperError::new("Closed")))
+            .unwrap_or_else(|| Err(SinkError::ChannelClosed))
     }
 
     fn poll_flush(
         mut self: std::pin::Pin<&mut Self>,
         _: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<std::result::Result<(), StomperError>> {
+    ) -> std::task::Poll<std::result::Result<(), SinkError>> {
         self.ok_unless_closed()
     }
 
     fn poll_close(
         mut self: std::pin::Pin<&mut Self>,
         _: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<std::result::Result<(), StomperError>> {
+    ) -> std::task::Poll<std::result::Result<(), SinkError>> {
         //drop the sender
         self.sender.take();
         Poll::Ready(Ok(()))
