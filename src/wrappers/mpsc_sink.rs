@@ -19,7 +19,7 @@ impl<T> UnboundedSenderSink<T> {
             Some(sender) => {
                 if sender.is_closed() {
                     // drop the actual sender, leaving an empty option
-                    &self.sender.take();
+                    drop(&self.sender.take());
                     None
                 } else {
                     self.sender.as_ref()
